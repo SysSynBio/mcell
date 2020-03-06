@@ -24,6 +24,22 @@
 #ifndef SRC4_DEFINES_H_
 #define SRC4_DEFINES_H_
 
+
+#include <assert.h>
+#ifdef __linux__
+void
+mcell__assert_fail (const char *assertion, const char *file, unsigned int line,
+         const char *function);
+#define mcell_assert(expr)             \
+  ((expr)               \
+   ? __ASSERT_VOID_CAST (0)           \
+   : mcell__assert_fail (#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))
+
+#undef assert
+#define assert mcell_assert
+#endif
+
+
 #ifndef NDEBUG
 // TODO: probably make this enabled only for Eclipse, we want the debug build to behave exactly as the release build
 #define INDEXER_WA // Don't know yet how to convince Eclipse to correctly index boost containers
@@ -50,8 +66,12 @@
 #include "mcell_structs.h"
 #include "debug_config.h"
 
+
 // warning: do not use floating point types from directly,
 // we need to be able to control the precision
+#define GLM_FORCE_AVX
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+
 #include "../libs/glm/glm.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "../libs/glm/gtx/component_wise.hpp"
@@ -59,6 +79,13 @@
 // this file must not depend on any other from mcell4 otherwise there
 // might be some nasty cyclic include dependencies
 #endif
+
+#ifdef __linux__
+#undef assert
+#define assert mcell_assert
+#endif
+
+
 
 // FIXME: it seems that everyone else uses .inl intead of .inc extensions
 
@@ -326,16 +353,39 @@ typedef glm::ivec3 ivec3_t;
 typedef glm::uvec3 uvec3_t;
 typedef glm::bvec3 bvec3_t;
 
+/*
+ * Alignment:
+ *
+ * All vec3_t instances must be aligned to FLOAT_T_BYTES*4 bytes
+ *   - 32 bytes or 256 bits for sizeof(double) * 4
+ * Unaligned loads can load one vec4 it at once.
+ *
+ * All structures containing vec3_t or vec2_t must use CLASS_ALIGNMENT.
+ * And if there is a constructor, one should check alignment of the 'this' pointer.
+ *
+ * Ordering of attributes in a class is: all vec3_t first, then all vec2_t.
+ * The rest is not important.
+ */
+// TODO: make these names shorter?
+#define VEC4_ALIGNMENT_BYTES (FLOAT_T_BYTES*4)
+#define VEC4_ALIGNMENT alignas(VEC4_ALIGNMENT_BYTES)
+#define CHECK_VEC4_ALIGNMENT(ptr) do { assert((unsigned long long)ptr % VEC4_ALIGNMENT_BYTES == 0); } while (0)
+
+#define VEC2_ALIGNMENT_BYTES (FLOAT_T_BYTES*2)
+#define VEC2_ALIGNMENT alignas(VEC2_ALIGNMENT_BYTES)
+#define CHECK_VEC2_ALIGNMENT(ptr) do { assert((unsigned long long)ptr % VEC2_ALIGNMENT_BYTES == 0); } while (0)
+
 // NOTE: rename to Vec3? - not sure, this is a really simple object...
-struct vec3_t: public glm_vec4_t {
-  vec3_t() { x = 0; y = 0; z = 0; w = 0; }
-  vec3_t(const glm_vec3_t& a) { x = a.x; y = a.y; z = a.z; w = 0; }
-  vec3_t(const glm_vec4_t& a) { x = a.x; y = a.y; z = a.z; w = 0; } // copy w as well?
-  vec3_t(const vec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { }
-  vec3_t(const ivec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { }
-  vec3_t(const vector3& a) { x = a.x; y = a.y; z = a.z; }
-  vec3_t(const float_t x_, const float_t y_, const float_t z_) { x = x_; y = y_; z = z_; w = 0; }
-  vec3_t(const float_t xyz) { x = xyz; y = xyz; z = xyz; w = 0; }
+struct VEC4_ALIGNMENT vec3_t: public glm_vec4_t {
+  // FIMXE: why am I initializing member using =?
+  vec3_t() { CHECK_VEC4_ALIGNMENT(this); x = 0; y = 0; z = 0; w = 0; }
+  vec3_t(const glm_vec3_t& a) { CHECK_VEC4_ALIGNMENT(this); x = a.x; y = a.y; z = a.z; w = 0; }
+  vec3_t(const glm_vec4_t& a) { CHECK_VEC4_ALIGNMENT(this); x = a.x; y = a.y; z = a.z; w = 0; } // copy w as well?
+  vec3_t(const vec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { CHECK_VEC4_ALIGNMENT(this); }
+  vec3_t(const ivec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { CHECK_VEC4_ALIGNMENT(this); }
+  vec3_t(const vector3& a) { CHECK_VEC4_ALIGNMENT(this); x = a.x; y = a.y; z = a.z; }
+  vec3_t(const float_t x_, const float_t y_, const float_t z_) { CHECK_VEC4_ALIGNMENT(this); x = x_; y = y_; z = z_; w = 0; }
+  vec3_t(const float_t xyz) { CHECK_VEC4_ALIGNMENT(this); x = xyz; y = xyz; z = xyz; w = 0; }
 
   bool is_valid() const { return !(x == POS_INVALID || y == POS_INVALID || z == POS_INVALID); }
 
@@ -354,13 +404,13 @@ static inline vec3_t operator/ (const float_t dividend, const vec3_t divisor) {
 }
 
 // usually are .u and .v used to access contained values
-struct vec2_t: public glm_vec2_t {
-  vec2_t() = default;
-  vec2_t(const glm_vec2_t& a) { x = a.x; y = a.y; }
-  vec2_t(const vec2_t& a) : glm_vec2_t(a.x, a.y) { }
-  vec2_t(const vector2& a) { x = a.u; y = a.v; }
-  vec2_t(const float_t x_, const float_t y_) { x = x_; y = y_; }
-  vec2_t(const float_t xy) { x = xy; y = xy; }
+struct VEC2_ALIGNMENT vec2_t: public glm_vec2_t {
+  vec2_t() { CHECK_VEC2_ALIGNMENT(this); x = 0; y = 0; }
+  vec2_t(const glm_vec2_t& a) { CHECK_VEC2_ALIGNMENT(this); x = a.x; y = a.y; }
+  vec2_t(const vec2_t& a) : glm_vec2_t(a.x, a.y) { CHECK_VEC2_ALIGNMENT(this); }
+  vec2_t(const vector2& a) { CHECK_VEC2_ALIGNMENT(this); x = a.u; y = a.v; }
+  vec2_t(const float_t x_, const float_t y_) { CHECK_VEC2_ALIGNMENT(this); x = x_; y = y_; }
+  vec2_t(const float_t xy) { CHECK_VEC2_ALIGNMENT(this); x = xy; y = xy; }
 
   bool is_valid() const { return !(x == POS_INVALID || y == POS_INVALID); }
 
