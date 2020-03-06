@@ -143,7 +143,7 @@ static inline void get_corner_points_for_subpart_colection(
     const vec3_t& pos,
     const vec3_t& move,
     const float_t rx_radius,
-    small_vector<vec3_t>& pts
+    small_vector<vec3_t, vec4_allocator<vec3_t>>& pts
 ) {
   assert(pts.size() >= 4);
   assert(!cmp_all_eq3(move, 0));
@@ -363,7 +363,7 @@ static inline void /*__attribute__((always_inline))*/ collect_crossed_subparts(
   //
   // However, when we are collecting walls, we want just the exct subpartitions and not neighbors.
   //
-  small_vector<vec3_t> start_positions;
+  small_vector<vec3_t, vec4_allocator<vec3_t>> start_positions;
   if (collect_for_walls) {
     start_positions.resize(NUM_CORNER_POINTS + 1);
     start_positions[MOL_POS_POINT_INDEX] = vm.v.pos;
@@ -398,7 +398,7 @@ static inline void /*__attribute__((always_inline))*/ collect_crossed_subparts(
   // we already subtracted displacement_of_radius_length from the current positions
   vec3_t extended_displacement = displacement + vec3_t(2)*displacement_of_radius_length;
 
-  small_vector<vec3_t> dest_positions;
+  small_vector<vec3_t, vec4_allocator<vec3_t>> dest_positions;
   dest_positions.resize(num_points);
 
   for (uint i = 0; i < num_points; i++) {

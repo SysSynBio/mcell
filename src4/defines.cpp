@@ -23,6 +23,8 @@
 
 #include "defines.h"
 
+#include "molecule.h"
+
 #include <iostream>
 #include <sstream>
 
@@ -33,6 +35,8 @@
 
 
 #ifdef __linux__
+
+#ifndef  NDEBUG
 
 #include <execinfo.h>
 #include <signal.h>
@@ -93,10 +97,6 @@ extern const char *__progname;
   a.c:10: foobar: Assertion `a == b' failed.
    It then aborts program execution via a call to `abort'.  */
 
-#ifdef FATAL_PREPARE_INCLUDE
-# include FATAL_PREPARE_INCLUDE
-#endif
-
 // from https://github.com/lattera/glibc/blob/master/assert/assert.c
 void
 mcell__assert_fail_base (const char *fmt, const char *assertion, const char *file,
@@ -138,7 +138,9 @@ mcell__assert_fail (const char *assertion, const char *file, unsigned int line,
   mcell__assert_fail_base ("%s%s%s:%u: %s%sAssertion `%s' failed.\n%n",
       assertion, file, line, function);
 }
-#endif
+
+#endif // !NDEBUG
+#endif // __linux__
 
 using namespace std;
 
@@ -197,4 +199,161 @@ void SimulationConfig::dump() {
   cout << "subpartition_edge_length: \t\t" << subpartition_edge_length << " [float_t] \t\t\n";
 }
 
+
+#if 0
+// only to test what SIMD instructions are used..
+
+bool collide_mol_test(
+    const glm_vec4_t& diffused_vm_pos,
+    const glm_vec4_t& displacement,
+    const glm_vec4_t& colliding_vm_pos,
+    const float_t rx_radius_3d,
+    float_t& rel_collision_time,
+    glm_vec4_t& rel_collision_pos
+) {
+
+  const glm_vec4_t& pos = colliding_vm_pos; /* Position of target molecule */
+  glm_vec4_t dir = pos - diffused_vm_pos;  /* From starting point of moving molecule to target */
+
+  float_t d = glm::dot((glm_vec4_t)dir, (glm_vec4_t)displacement);        /* Dot product of movement vector and vector to target */
+
+  /* Miss the molecule if it's behind us */
+  if (d < 0) {
+    return false;
+  }
+
+  float_t movelen2 = glm::dot((glm_vec4_t)displacement, (glm_vec4_t)displacement); /* Square of distance the moving molecule travels */
+
+  /* check whether the test molecule is further than the displacement. */
+  if (d > movelen2) {
+    return false;
+  }
+
+  /* check whether the moving molecule will miss interaction disk of the
+     test molecule.*/
+  float_t dirlen2 = glm::dot((glm_vec4_t)dir, (glm_vec4_t)dir);
+  float_t sigma2 = rx_radius_3d * rx_radius_3d;   /* Square of interaction radius */
+  if (movelen2 * dirlen2 - d * d > movelen2 * sigma2) {
+    return false;
+  }
+
+
+  rel_collision_time = d / movelen2;
+
+  rel_collision_pos = diffused_vm_pos + glm_vec4_t(rel_collision_time) * displacement;
+  return true;
+}
+
+
+bool collide_mol_interm(
+    const Molecule& diffused_vm,
+    const glm_vec4_t& displacement,
+    const Molecule& colliding_vm,
+    const float_t rx_radius_3d,
+    float_t& rel_collision_time,
+    vec3_t& rel_collision_pos
+) {
+
+  glm_vec4_t diffused_vm_pos = diffused_vm.v.pos;
+  glm_vec4_t colliding_vm_pos = colliding_vm.v.pos;
+
+  const glm_vec4_t& pos = colliding_vm_pos; /* Position of target molecule */
+  glm_vec4_t dir = pos - diffused_vm_pos;  /* From starting point of moving molecule to target */
+  //vec3_t dir = subxxx(pos, diffused_vm.v.pos);
+
+  float_t d = glm::dot((glm_vec4_t)dir, (glm_vec4_t)displacement);        /* Dot product of movement vector and vector to target */
+
+  /* Miss the molecule if it's behind us */
+  if (d < 0) {
+    return false;
+  }
+
+  float_t movelen2 = glm::dot((glm_vec4_t)displacement, (glm_vec4_t)displacement); /* Square of distance the moving molecule travels */
+
+  /* check whether the test molecule is further than the displacement. */
+  if (d > movelen2) {
+    return false;
+  }
+
+  /* check whether the moving molecule will miss interaction disk of the
+     test molecule.*/
+  float_t dirlen2 = glm::dot((glm_vec4_t)dir, (glm_vec4_t)dir);
+  float_t sigma2 = rx_radius_3d * rx_radius_3d;   /* Square of interaction radius */
+  if (movelen2 * dirlen2 - d * d > movelen2 * sigma2) {
+    return false;
+  }
+
+  /* reject collisions with itself */
+  if (diffused_vm.id == colliding_vm.id) {
+    return false;
+  }
+
+  /* defunct - not probable */
+  if (colliding_vm.is_defunct()) {
+    return false;
+  }
+
+  rel_collision_time = d / movelen2;
+
+  rel_collision_pos = diffused_vm_pos + rel_collision_time * displacement;
+  return true;
+}
+
+// check whether diffused_vm molecule collision that moves by displacement can collide
+// with colliding_vm; returns true if there can be a collision and returns relative collision
+// time and relative position
+bool collide_mol_orig(
+    const Molecule& diffused_vm,
+    const vec3_t& displacement,
+    const Molecule& colliding_vm,
+    const float_t rx_radius_3d,
+    float_t& rel_collision_time,
+    vec3_t& rel_collision_pos
+) {
+
+  const vec3_t& pos = colliding_vm.v.pos; /* Position of target molecule */
+  vec3_t dir = pos - diffused_vm.v.pos;  /* From starting point of moving molecule to target */
+
+  float_t d = glm::dot((glm_vec4_t)dir, (glm_vec4_t)displacement);        /* Dot product of movement vector and vector to target */
+
+  /* Miss the molecule if it's behind us */
+  if (d < 0) {
+    return false;
+  }
+
+  float_t movelen2 = glm::dot((glm_vec4_t)displacement, (glm_vec4_t)displacement); /* Square of distance the moving molecule travels */
+
+  /* check whether the test molecule is further than the displacement. */
+  if (d > movelen2) {
+    return false;
+  }
+
+  /* check whether the moving molecule will miss interaction disk of the
+     test molecule.*/
+  float_t dirlen2 = glm::dot((glm_vec4_t)dir, (glm_vec4_t)dir);
+  float_t sigma2 = rx_radius_3d * rx_radius_3d;   /* Square of interaction radius */
+  if (movelen2 * dirlen2 - d * d > movelen2 * sigma2) {
+    return false;
+  }
+
+  /* reject collisions with itself */
+  if (diffused_vm.id == colliding_vm.id) {
+    return false;
+  }
+
+  /* defunct - not probable */
+  if (colliding_vm.is_defunct()) {
+    return false;
+  }
+
+  rel_collision_time = d / movelen2;
+
+  rel_collision_pos = diffused_vm.v.pos + rel_collision_time * displacement;
+  return true;
+}
+
+#endif
+
 } // namespace mcell
+
+

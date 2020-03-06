@@ -135,14 +135,22 @@ class Wall;
  *
  * Contains an array of tiles.
  */
-class Grid {
+class VEC2_ALIGNMENT Grid {
 public:
+
+  // TODO: initializer
+  Grid() {
+    CHECK_VEC2_ALIGNMENT(this);
+  }
+
   bool is_initialized() const {
     // Every initialized grid has at least one item in this array
     return !molecules_per_tile.empty();
   }
 
   void initialize(const Partition& p, const Wall& w);
+
+  vec2_t vert0;          /* Projection of vertex zero onto unit_u and unit_v of wall */
 
   uint num_tiles_along_axis; // Number of slots along each axis (originally n)
   uint num_tiles; // Number of tiles in effector grid (triangle: grid_size^2, rectangle: 2*grid_size^2) (originally n_tiles)
@@ -151,7 +159,6 @@ public:
   float_t vert2_slope;   /* Slope from vertex 0 to vertex 2 */
   float_t fullslope;     /* Slope of full width of triangle */
   float_t binding_factor;
-  vec2_t vert0;          /* Projection of vertex zero onto unit_u and unit_v of wall */
 
   void set_molecule_tile(tile_index_t tile_index, molecule_id_t id) {
     assert(is_initialized());
@@ -222,7 +229,7 @@ private:
  * state of this object is consistent. However, how to do it without
  * making the attributes private?
  */
-class Wall {
+class VEC4_ALIGNMENT Wall {
 public:
   Wall()
     : id(WALL_ID_INVALID), index(WALL_INDEX_INVALID), side(0),
@@ -230,8 +237,8 @@ public:
       wall_constants_precomputed(false),
       uv_vert1_u(POS_INVALID), uv_vert2(POS_INVALID),
       area(POS_INVALID),
-      normal(POS_INVALID), unit_u(POS_INVALID), unit_v(POS_INVALID), distance_to_origin(POS_INVALID)
-    {
+      normal(POS_INVALID), unit_u(POS_INVALID), unit_v(POS_INVALID), distance_to_origin(POS_INVALID) {
+    CHECK_VEC4_ALIGNMENT(this);
   }
 
   // the partition argument is used only to access vertices, wall is not aded to the partition
@@ -244,8 +251,10 @@ public:
       wall_constants_precomputed(false),
       uv_vert1_u(POS_INVALID), uv_vert2(POS_INVALID),
       area(POS_INVALID),
-      normal(POS_INVALID), unit_u(POS_INVALID), unit_v(POS_INVALID), distance_to_origin(POS_INVALID)
-    {
+      normal(POS_INVALID), unit_u(POS_INVALID), unit_v(POS_INVALID), distance_to_origin(POS_INVALID) {
+
+    CHECK_VEC4_ALIGNMENT(this);
+
     vertex_indices[0] = index0;
     vertex_indices[1] = index1;
     vertex_indices[2] = index2;
@@ -274,6 +283,13 @@ public:
     }
   }
 
+  vec3_t normal; /* Normal vector for this wall */
+  vec3_t unit_u; /* U basis vector for this wall */
+  vec3_t unit_v; /* V basis vector for this wall */
+
+  vec2_t uv_vert2;      /* Surface coords of third corner */
+
+
   wall_id_t id; // world-unique identifier of this wall, mainly for debugging
   wall_index_t index; // index in the partition where it is contained, must be fixed if moved
   uint side; // index in its parent object, not sure if really needed
@@ -299,12 +315,8 @@ public:
   // --- wall constants ---
   bool wall_constants_precomputed;
   float_t uv_vert1_u;   /* Surface u-coord of 2nd corner (v=0) */
-  vec2_t uv_vert2;      /* Surface coords of third corner */
 
   float_t area;  /* Area of this element */
-  vec3_t normal; /* Normal vector for this wall */
-  vec3_t unit_u; /* U basis vector for this wall */
-  vec3_t unit_v; /* V basis vector for this wall */
   float_t distance_to_origin; // distance to origin (point normal form)
 
   // p must be the partition that contains this object
@@ -325,12 +337,13 @@ public:
 
 // auxiliary class used to hold information on
 // grid position for reactions
-class GridPos {
+class VEC2_ALIGNMENT GridPos {
 public:
   GridPos()
-    : initialized(false),
+    : pos(POS_INVALID), initialized(false),
       wall_index(WALL_INDEX_INVALID), tile_index(TILE_INDEX_INVALID),
-      pos_is_set(false), pos(POS_INVALID) {
+      pos_is_set(false) {
+    CHECK_VEC2_ALIGNMENT(this);
   }
 
   static GridPos make_with_pos(const Partition& p, const Molecule& sm) {
@@ -357,11 +370,11 @@ public:
     return res;
   }
 
+  vec2_t pos;
   bool initialized; // was this info initialized
   wall_index_t wall_index;  /* wall where the tile is on */
   tile_index_t tile_index;  /* index on that tile */
   bool pos_is_set;
-  vec2_t pos;
 };
 
 // several utility functions related to geometry
@@ -370,7 +383,7 @@ namespace Geometry {
 // this is the entry point called from Partition class
 void update_moved_walls(
     Partition& p,
-    const std::vector<VertexMoveInfo>& scheduled_vertex_moves,
+    const VertexMoveInfoVector& scheduled_vertex_moves,
     // we can compute all the information already from scheduled_vertex_moves,
     // but the keys of the map walls_with_their_moves are the walls that we need to update
     const WallsWithTheirMovesMap& walls_with_their_moves

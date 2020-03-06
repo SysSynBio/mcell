@@ -55,7 +55,7 @@ class RxnClass;
 
 
 #ifndef INDEXER_WA
-typedef boost::container::small_vector<Collision, 16> collision_vector_t;
+typedef boost::container::small_vector<Collision, 16, vec4_allocator<Collision>> collision_vector_t;
 
 // boost't set is slower (measured for mcell_tests_private/benchmarks/mdl/B3050_camkii_gen_rxn_faster_no_rxn_out_it_200)
 //typedef boost::container::flat_set<subpart_index_t> subpart_indices_set_t;
@@ -65,7 +65,7 @@ typedef google::dense_hash_set<subpart_index_t> subpart_indices_set_t;
 #define SUBPART_SET_INITIALIZE(container, size, invalid_value) container.set_empty_key(invalid_value)
 
 #else
-typedef std::vector<Collision> collision_vector_t; // FIXME: shoudl be UpperCase
+typedef std::vector<Collision, vec4_allocator<Collision>> collision_vector_t; // FIXME: shoudl be UpperCase
 typedef std::set<subpart_index_t> subpart_indices_set_t;
 #define SUBPART_SET_INITIALIZE(container, size, invalid_value) do { } while(0)
 #endif
@@ -73,11 +73,12 @@ typedef std::set<subpart_index_t> subpart_indices_set_t;
  * Information about collision of 2 volume/surface molecules or a of a wall collision,
  * used in diffuse_react and in partition.
  */
-class Collision {
+class VEC4_ALIGNMENT Collision {
 public:
   Collision()
     : type(CollisionType::INVALID), partition(nullptr), diffused_molecule_id(MOLECULE_ID_INVALID), time(TIME_INVALID),
       colliding_molecule_id(MOLECULE_ID_INVALID), rx(nullptr), rxn_class(nullptr), colliding_wall_index(WALL_INDEX_INVALID) {
+    CHECK_VEC4_ALIGNMENT(this);
   }
 
   // maybe create some static constructors with better names
@@ -102,6 +103,7 @@ public:
       colliding_wall_index(WALL_INDEX_INVALID) {
     assert((type == CollisionType::VOLMOL_VOLMOL || type == CollisionType::VOLMOL_SURFMOL)
         && "This constructor must be used only for volmol or volsurf collisions");
+    CHECK_VEC4_ALIGNMENT(this);
   }
 
   Collision(
@@ -122,6 +124,7 @@ public:
       rxn_class(rxn_class_ptr),
       colliding_wall_index(WALL_INDEX_INVALID) {
     assert(type == CollisionType::SURFMOL_SURFMOL && "This constructor must be used only for surfsurf collisions");
+    CHECK_VEC4_ALIGNMENT(this);
   }
 
   Collision(
@@ -143,6 +146,7 @@ public:
       rxn_class(nullptr),
       colliding_wall_index(colliding_wall_index_) {
     assert((type == CollisionType::WALL_BACK || type == CollisionType::WALL_FRONT) && "This constructor must be used only for wall collisions");
+    CHECK_VEC4_ALIGNMENT(this);
   }
 
   Collision(
@@ -164,14 +168,15 @@ public:
       rxn_class(nullptr),
       colliding_wall_index(WALL_INDEX_INVALID) {
     assert(type == CollisionType::UNIMOLECULAR_VOLMOL && "This constructor must be used only for unimol volmol collisions");
+    CHECK_VEC4_ALIGNMENT(this);
   }
 
 
+  vec3_t pos;
   CollisionType type;
   Partition* partition;
   molecule_id_t diffused_molecule_id;
   float_t time;
-  vec3_t pos;
 
   // valid only for is_wall_collision
   molecule_id_t colliding_molecule_id;

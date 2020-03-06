@@ -76,7 +76,7 @@ enum molecule_flag_t {
 /**
  * Base class for all molecules.
  */
-class Molecule {
+class VEC4_ALIGNMENT Molecule {
 public:
   Molecule()
     : id(MOLECULE_ID_INVALID), flags(0), unimol_rx_time(TIME_FOREVER), unimol_rx(nullptr), species_id(SPECIES_ID_INVALID) {

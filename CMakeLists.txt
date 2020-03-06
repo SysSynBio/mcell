@@ -28,11 +28,12 @@ add_definitions(-DPACKAGE_BUGREPORT="mcell@salk.edu")
 
 SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 ")
 SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 ")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -ldl -export-dynamic ")
 
 set(INCLUDE_DIRS " -isystem ${CMAKE_SOURCE_DIR}/libs/")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-  SET(OPTIMIZATION_FLAGS " -O3 -march=core2 -finline-limit=10000 ")
+  SET(OPTIMIZATION_FLAGS " -O3 -march=native -finline-limit=10000 ")
   
   # must not be used for pymcell (at least for now)
   SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie ")
@@ -41,11 +42,12 @@ endif()
 set(WARNING_FLAGS "-Wall -Wextra -Wno-shadow -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -fpermissive")
 
 set(INCLUDE_DIRS " -isystem ${CMAKE_SOURCE_DIR}/libs/")
-SET(COMMON_C_CXX_FLAGS "${WARNING_FLAGS} -g3 ${OPTIMIZATION_FLAGS} ${INCLUDE_DIRS} -D_GNU_SOURCE=1")
+SET(COMMON_C_CXX_FLAGS "${WARNING_FLAGS} -mavx -g0 ${OPTIMIZATION_FLAGS} ${INCLUDE_DIRS} -D_GNU_SOURCE=1")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_C_CXX_FLAGS}  -std=c11 ")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_C_CXX_FLAGS} -std=c++14")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_C_CXX_FLAGS} -std=c++14 ") # !!! using -std=c++17 disables usage of SIMD builtins from GLM! with gcc 6.3.0 
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_C_CXX_FLAGS} -std=c++17 ") # !!! using -std=c++17 disables usage of SIMD builtins from GLM! with gcc 6.3.0
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lm")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lm ")
 
 if (CYGWIN)
     # cygwin app run in cygwin environment is somehow unable to load cygstdc++-6.dll
@@ -87,16 +89,15 @@ endif()
 if (ENABLE_GPERFTOOLS)
   # TODO: build and install gperftools, for now it is done manually
   # then to run profiling 
-  # CPUPROFILE=./prof.out mc4
+  # export CPUPROFILE=./prof.out 
+  # mc4
   # pprof --text <app> ./prof.out # text output
   # pprof --gv <app> ./prof.out # graphical output, requires gv installed
   # (http://euccas.github.io/blog/20170827/cpu-profiling-tools-on-linux.html)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITHGPERFTOOLS -I${CMAKE_CURRENT_BINARY_DIR}/libs/")
-  
+  SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/libs/install_gperftools/lib/ -lprofiler")
+
   set(GPERFTOOLS_LIB ${CMAKE_CURRENT_BINARY_DIR}/libs/install_gperftools/lib/libprofiler.a)
-  # referencing directly the archive -lprofiler is too general and can lead to   
-  SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GPERFTOOLS_LIB}")
-  
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libs/build_gperftools)
   execute_process(
   	COMMAND bash "-c" "${CMAKE_SOURCE_DIR}/libs/gperftools/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libs/install_gperftools" 

@@ -109,7 +109,7 @@ public:
     return partitions[i];
   }
 
-  std::vector<Partition>& get_partitions() {
+  std::vector<Partition, vec4_allocator<Partition>>& get_partitions() {
       return partitions;
   }
 
@@ -139,7 +139,7 @@ public:
   }
 
 private:
-  std::vector<Partition> partitions;
+  std::vector<Partition, vec4_allocator<Partition>> partitions;
 
 public:
   Scheduler scheduler;

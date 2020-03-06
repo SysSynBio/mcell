@@ -41,7 +41,7 @@ void DefragmentationEvent::dump(const string indent) {
 
 void DefragmentationEvent::step() {
   for (Partition& p: world->get_partitions()) {
-    vector<Molecule>& volume_molecules = p.get_molecules();
+    std::vector<Molecule, vec4_allocator<Molecule>>& volume_molecules = p.get_molecules();
     vector<molecule_index_t>& volume_molecules_id_to_index_mapping = p.get_molecule_id_to_index_mapping();
 
     vector<Partition::TimeStepMoleculesData>& mols_per_time_step = p.get_molecule_data_per_time_step_array();
@@ -54,7 +54,7 @@ void DefragmentationEvent::step() {
     Molecule::dump_array(volume_molecules);
 #endif
 
-    typedef vector<Molecule>::iterator vmit_t;
+    typedef std::vector<Molecule, vec4_allocator<Molecule>>::iterator vmit_t;
     vmit_t it_begin = volume_molecules.begin();
     vmit_t it_end = volume_molecules.end();
 

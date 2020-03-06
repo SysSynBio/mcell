@@ -43,7 +43,7 @@ namespace MCell {
  * Partition class contains all molecules and other data contained in
  * one simulation block.
  */
-class Partition {
+class VEC4_ALIGNMENT Partition {
 public:
   Partition(
       const vec3_t origin_,
@@ -346,13 +346,13 @@ public:
     return volume_molecule_reactants_per_subpart[subpart_index][species_id];
   }
 
-
-  const std::vector<Molecule>& get_molecules() const {
+  // TODO: some using/typedef for the aligned vectors
+  const std::vector<Molecule, vec4_allocator<Molecule>>& get_molecules() const {
     return molecules;
   }
 
 
-  std::vector<Molecule>& get_molecules() {
+  std::vector<Molecule, vec4_allocator<Molecule>>& get_molecules() {
     return molecules;
   }
   
@@ -548,7 +548,7 @@ private:
   // ---------------------------------- molecules ----------------------------------
 
   // vector containing all molecules in this partition (volume and surface)
-  std::vector<Molecule> molecules;
+  std::vector<Molecule, vec4_allocator<Molecule>> molecules;
 
   // contains mapping of molecule ids to indices to the molecules array
   std::vector<molecule_index_t> molecule_id_to_index_mapping;
@@ -565,12 +565,12 @@ private:
 
   // ---------------------------------- geometry objects ----------------------------------
 
-  std::vector<vec3_t> geometry_vertices;
+  std::vector<vec3_t, vec4_allocator<vec3_t>> geometry_vertices;
 
   // we must plan for dynamic geometry but for now its just static
   std::vector<GeometryObject> geometry_objects;
 
-  std::vector<Wall> walls;
+  std::vector<Wall, vec4_allocator<Wall>> walls;
 
   std::vector<Region> regions;
 
@@ -582,7 +582,7 @@ private:
 
   // ---------------------------------- dynamic vertices ----------------------------------
 private:
-  std::vector<VertexMoveInfo> scheduled_vertex_moves;
+  std::vector<VertexMoveInfo, vec4_allocator<VertexMoveInfo>> scheduled_vertex_moves;
 
   // ---------------------------------- shared simulation configuration -------------------
 public:

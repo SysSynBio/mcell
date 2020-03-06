@@ -27,18 +27,23 @@
 
 #include <assert.h>
 #ifdef __linux__
+
+# ifdef  NDEBUG
+
+#  define assert(expr)   (__ASSERT_VOID_CAST (0))
+
+#else // NDEBUG
 void
 mcell__assert_fail (const char *assertion, const char *file, unsigned int line,
          const char *function);
-#define mcell_assert(expr)             \
+#  define mcell_assert(expr)             \
   ((expr)               \
    ? __ASSERT_VOID_CAST (0)           \
    : mcell__assert_fail (#expr, __FILE__, __LINE__, __ASSERT_FUNCTION))
-
-#undef assert
-#define assert mcell_assert
-#endif
-
+#  undef assert
+#  define assert mcell_assert
+# endif // NDEBUG
+#endif // __linux__
 
 #ifndef NDEBUG
 // TODO: probably make this enabled only for Eclipse, we want the debug build to behave exactly as the release build
@@ -59,9 +64,12 @@ mcell__assert_fail (const char *assertion, const char *file, unsigned int line,
 #include <cmath>
 #include <iostream>
 #include <map>
+#include <new>
 #include <unordered_map>
 #include "../libs/boost/container/small_vector.hpp"
 #include "../libs/boost/container/flat_set.hpp"
+#include "../libs/boost/container/flat_set.hpp"
+#include "../libs/boost/align/aligned_allocator.hpp"
 
 #include "mcell_structs.h"
 #include "debug_config.h"
@@ -70,6 +78,7 @@ mcell__assert_fail (const char *assertion, const char *file, unsigned int line,
 // warning: do not use floating point types from directly,
 // we need to be able to control the precision
 #define GLM_FORCE_AVX
+#define GLM_FORCE_SSE2
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include "../libs/glm/glm.hpp"
@@ -80,10 +89,15 @@ mcell__assert_fail (const char *assertion, const char *file, unsigned int line,
 // might be some nasty cyclic include dependencies
 #endif
 
+// override the assert macro once more
 #ifdef __linux__
-#undef assert
-#define assert mcell_assert
-#endif
+# ifdef  NDEBUG
+#  define assert(expr)   (__ASSERT_VOID_CAST (0))
+#else // NDEBUG
+#  undef assert
+#  define assert mcell_assert
+# endif // NDEBUG
+#endif // __linux__
 
 
 
@@ -369,6 +383,8 @@ typedef glm::bvec3 bvec3_t;
 // TODO: make these names shorter?
 #define VEC4_ALIGNMENT_BYTES (FLOAT_T_BYTES*4)
 #define VEC4_ALIGNMENT alignas(VEC4_ALIGNMENT_BYTES)
+template<class T>
+  using vec4_allocator = boost::alignment::aligned_allocator<T, VEC4_ALIGNMENT_BYTES>;
 #define CHECK_VEC4_ALIGNMENT(ptr) do { assert((unsigned long long)ptr % VEC4_ALIGNMENT_BYTES == 0); } while (0)
 
 #define VEC2_ALIGNMENT_BYTES (FLOAT_T_BYTES*2)
@@ -378,11 +394,17 @@ typedef glm::bvec3 bvec3_t;
 // NOTE: rename to Vec3? - not sure, this is a really simple object...
 struct VEC4_ALIGNMENT vec3_t: public glm_vec4_t {
   // FIMXE: why am I initializing member using =?
-  vec3_t() { CHECK_VEC4_ALIGNMENT(this); x = 0; y = 0; z = 0; w = 0; }
+  // FIXME: debug check
+  // seems that this ctor is needed for correct function of SIMD?
+  vec3_t() = default; //{ CHECK_VEC4_ALIGNMENT(this); x = 0; y = 0; z = 0; w = 0; }
   vec3_t(const glm_vec3_t& a) { CHECK_VEC4_ALIGNMENT(this); x = a.x; y = a.y; z = a.z; w = 0; }
-  vec3_t(const glm_vec4_t& a) { CHECK_VEC4_ALIGNMENT(this); x = a.x; y = a.y; z = a.z; w = 0; } // copy w as well?
-  vec3_t(const vec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { CHECK_VEC4_ALIGNMENT(this); }
-  vec3_t(const ivec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { CHECK_VEC4_ALIGNMENT(this); }
+
+  vec3_t(const glm_vec4_t& a) { CHECK_VEC4_ALIGNMENT(this); x = a.x; y = a.y; z = a.z; w = a.w; } // copy w as well? - yes
+  //vec3_t(const vec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { CHECK_VEC4_ALIGNMENT(this); }
+  //vec3_t(const ivec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { CHECK_VEC4_ALIGNMENT(this); }
+
+  vec3_t(const vec3_t& a) : glm_vec4_t(a.x, a.y, a.z, a.w /* must be here */) { CHECK_VEC4_ALIGNMENT(this); }
+
   vec3_t(const vector3& a) { CHECK_VEC4_ALIGNMENT(this); x = a.x; y = a.y; z = a.z; }
   vec3_t(const float_t x_, const float_t y_, const float_t z_) { CHECK_VEC4_ALIGNMENT(this); x = x_; y = y_; z = z_; w = 0; }
   vec3_t(const float_t xyz) { CHECK_VEC4_ALIGNMENT(this); x = xyz; y = xyz; z = xyz; w = 0; }

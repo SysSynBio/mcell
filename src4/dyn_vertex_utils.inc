@@ -297,7 +297,7 @@ static void collect_volume_molecules_moved_due_to_moving_wall(
   }
 
   // NOTE: optimize only for molecules in relevant subpartitions
-  std::vector<Molecule>& molecules = p.get_molecules();
+  std::vector<Molecule, vec4_allocator<Molecule>>& molecules = p.get_molecules();
   for (Molecule& m: molecules) {
 
     if (m.is_surf()) {

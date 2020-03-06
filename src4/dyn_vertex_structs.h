@@ -31,17 +31,17 @@ namespace MCell {
 
 class Partition;
 
-struct VertexMoveInfo {
+struct VEC4_ALIGNMENT VertexMoveInfo {
   VertexMoveInfo(const vertex_index_t vertex_index_, const vec3_t& translation_vec_)
-    : vertex_index(vertex_index_), translation_vec(translation_vec_) {
+    : translation_vec(translation_vec_), vertex_index(vertex_index_) {
   }
-  // which index to move
-  vertex_index_t vertex_index;
-  // and by how much
+  // by how much
   vec3_t translation_vec;
+  // and which index to move
+  vertex_index_t vertex_index;
 };
 
-typedef std::vector<VertexMoveInfo> VertexMoveInfoVector;
+typedef std::vector<VertexMoveInfo, vec4_allocator<VertexMoveInfo>> VertexMoveInfoVector;
 typedef std::map<wall_index_t, VertexMoveInfoVector> WallsWithTheirMovesMap;
 
 struct VolumeMoleculeMoveInfo {
@@ -57,18 +57,18 @@ struct VolumeMoleculeMoveInfo {
 };
 typedef std::vector<VolumeMoleculeMoveInfo> VolumeMoleculeMoveInfoVector;
 
-struct SurfaceMoleculeMoveInfo {
+struct VEC4_ALIGNMENT SurfaceMoleculeMoveInfo {
   SurfaceMoleculeMoveInfo(const molecule_id_t molecule_id_, const wall_index_t wall_index_, const vec3_t pos3d_)
     : molecule_id(molecule_id_), wall_index(wall_index_), pos3d(pos3d_) {
   }
+  // above or below
+  vec3_t pos3d;
   // molecule to move
   molecule_id_t molecule_id;
   // which wall moved this molecule first
   wall_index_t wall_index;
-  // above or below
-  vec3_t pos3d;
 };
-typedef std::vector<SurfaceMoleculeMoveInfo> SurfaceMoleculeMoveInfoVector;
+typedef std::vector<SurfaceMoleculeMoveInfo, vec4_allocator<SurfaceMoleculeMoveInfo>> SurfaceMoleculeMoveInfoVector;
 
 } // namespace MCell
 

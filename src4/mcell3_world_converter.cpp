@@ -965,6 +965,10 @@ bool MCell3WorldConverter::convert_release_events(volume* s) {
         float_t train_end = train_start + rp->train_duration;
         float_t current_time = train_start;
         while (current_time < train_end) {
+#if __cpp_aligned_new
+#error "ok"
+#endif
+
           ReleaseEvent* event_to_schedule = new ReleaseEvent(world);
           *event_to_schedule = event_data;
 
