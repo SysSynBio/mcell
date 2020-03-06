@@ -114,7 +114,7 @@ static void exd_coordize(const vec3_t& mv, vec3_t& m,
   float_t a;
 
   /* Normalize input vector */
-  a = 1.0 / sqrt(dot(mv, mv));
+  a = 1.0 / sqrt(dot3(mv, mv));
   m = vec3_t(a) * mv;
 
   float_t mx2 = m.x * m.x;
@@ -859,16 +859,16 @@ static float_t __attribute__((noinline)) exact_disk(
 
   /* Partially set up coordinate systems for first pass */
   float_t R2 = R * R;
-  float_t m2_i = 1.0 / dot(mv, mv);
+  float_t m2_i = 1.0 / dot3(mv, mv);
 
   /* Set up coordinate system and convert vertices */
   vec3_t m, u, v;
   exd_coordize(mv, m, u, v);
 
   vec3_t Lmuv;
-  Lmuv.m = dot(loc, m);
-  Lmuv.u = dot(loc, u);
-  Lmuv.v = dot(loc, v);
+  Lmuv.m = dot3(loc, m);
+  Lmuv.u = dot3(loc, u);
+  Lmuv.v = dot3(loc, v);
 
   exd_vertex_t sm;
   if (!distinguishable_vec3(loc, target.v.pos, EPS)) { /* Hit target exactly! */
@@ -876,8 +876,8 @@ static float_t __attribute__((noinline)) exact_disk(
   }
   else { /* Find location of target in moving-molecule-centric coords */
     vec3_t target_distance = target.v.pos - loc;
-    sm.u = dot(target_distance, u);
-    sm.v = dot(target_distance, v);
+    sm.u = dot3(target_distance, u);
+    sm.v = dot3(target_distance, v);
     sm.r2 = len2_squared(sm);
     sm.zeta = exd_zetize(sm.v, sm.u);
   }
@@ -898,11 +898,11 @@ static float_t __attribute__((noinline)) exact_disk(
     /* Ignore this wall if it is too far away! */
 
     /* Find distance from plane of wall to molecule */
-    float_t l_n = dot(loc, w.normal);
+    float_t l_n = dot3(loc, w.normal);
     float_t d = w.distance_to_origin - l_n;
 
     /* See if we're within interaction distance of wall */
-    float_t m_n = dot(mv, w.normal);
+    float_t m_n = dot3(mv, w.normal);
     if (d * d >= R2 * (1 - m2_i * m_n * m_n))
       continue;
 
@@ -966,9 +966,9 @@ static float_t __attribute__((noinline)) exact_disk(
 
     /* Find line of intersection between wall and disk */
     vec3_t v0muv, v1muv, v2muv;
-    v0muv = vec3_t(dot(w_vert[0], m), dot(w_vert[0], u), dot(w_vert[0], v)) - Lmuv;
-    v1muv = vec3_t(dot(w_vert[1], m), dot(w_vert[1], u), dot(w_vert[1], v)) - Lmuv;
-    v2muv = vec3_t(dot(w_vert[2], m), dot(w_vert[2], u), dot(w_vert[2], v)) - Lmuv;
+    v0muv = vec3_t(dot3(w_vert[0], m), dot3(w_vert[0], u), dot3(w_vert[0], v)) - Lmuv;
+    v1muv = vec3_t(dot3(w_vert[1], m), dot3(w_vert[1], u), dot3(w_vert[1], v)) - Lmuv;
+    v2muv = vec3_t(dot3(w_vert[2], m), dot3(w_vert[2], u), dot3(w_vert[2], v)) - Lmuv;
 
     exd_vertex_t pa, pb;
     /* Draw lines between points and pick intersections with plane of m=0 */

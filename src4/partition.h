@@ -126,8 +126,7 @@ public:
 
 
   bool in_this_partition(const vec3_t& pos) const {
-    return glm::all(glm::greaterThanEqual(pos, origin_corner))
-      && glm::all(glm::lessThan(pos, opposite_corner));
+    return cmp_all_ge3_noeps(pos, origin_corner) && cmp_all_lt3_noeps(pos, opposite_corner);
   }
 
 

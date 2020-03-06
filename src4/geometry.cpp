@@ -115,8 +115,8 @@ void Grid::initialize(const Partition& p, const Wall& w) {
 
   const vec3_t& vert0_tmp = p.get_wall_vertex(w, 0);
 
-  vert0.u = dot(vert0_tmp, w.unit_u);
-  vert0.v = dot(vert0_tmp, w.unit_v);
+  vert0.u = dot3(vert0_tmp, w.unit_u);
+  vert0.v = dot3(vert0_tmp, w.unit_v);
 }
 
 
@@ -188,13 +188,13 @@ void Edge::reinit_edge_constants(const Partition& p) {
   vec3_t diff_i_0 = wf_vert_i - wf_vert_0;
 
   vec2_t O_f;
-  O_f.u = dot(diff_i_0, wf.unit_u); // should be called after wall init
-  O_f.v = dot(diff_i_0, wf.unit_v); /* Origin */
+  O_f.u = dot3(diff_i_0, wf.unit_u); // should be called after wall init
+  O_f.v = dot3(diff_i_0, wf.unit_v); /* Origin */
 
   vec3_t diff_j_0 = wf_vert_j - wf_vert_0;
   vec2_t temp_ff;
-  temp_ff.u = dot(diff_j_0, wf.unit_u) - O_f.u;
-  temp_ff.v = dot(diff_j_0, wf.unit_v) - O_f.v; /* Far side of e */
+  temp_ff.u = dot3(diff_j_0, wf.unit_u) - O_f.u;
+  temp_ff.v = dot3(diff_j_0, wf.unit_v) - O_f.v; /* Far side of e */
 
   assert(!cmp_eq(len2_squared(temp_ff), 0.0, EPS));
   float_t d_f = 1.0 / len2(temp_ff);
@@ -207,13 +207,13 @@ void Edge::reinit_edge_constants(const Partition& p) {
   /* Intermediate basis from the perspective of the backward frame */
   vec3_t diff_i_b0 = wf_vert_i - wb_vert_0;
   vec2_t O_b;
-  O_b.u = dot(diff_i_b0, wb.unit_u);
-  O_b.v = dot(diff_i_b0, wb.unit_v); /* Origin */
+  O_b.u = dot3(diff_i_b0, wb.unit_u);
+  O_b.v = dot3(diff_i_b0, wb.unit_v); /* Origin */
 
   vec3_t diff_j_b0 = wf_vert_j - wb_vert_0;
   vec2_t temp_fb;
-  temp_fb.u = dot(diff_j_b0, wb.unit_u) - O_b.u;
-  temp_fb.v = dot(diff_j_b0, wb.unit_v) - O_b.v; /* Far side of e */
+  temp_fb.u = dot3(diff_j_b0, wb.unit_u) - O_b.u;
+  temp_fb.v = dot3(diff_j_b0, wb.unit_v) - O_b.v; /* Far side of e */
 
   assert(!cmp_eq(len2_squared(temp_fb), 0.0, EPS));
   float_t d_b = 1.0 / len2(temp_fb);
@@ -261,7 +261,7 @@ void Edge::debug_check_values_are_uptodate(const Partition& p) {
   dump();
   reinit_edge_constants(p);
   dump();
-  assert(cmp_eq(orig_translate, translate));
+  assert(cmp_all_eq2(orig_translate, translate));
   assert(cmp_eq(orig_cos_theta, cos_theta));
   assert(cmp_eq(orig_sin_theta, sin_theta));
 }
@@ -318,11 +318,11 @@ void Wall::precompute_wall_constants(const Partition& p) {
 
   unit_v = cross(normal, unit_u);
 
-  distance_to_origin =  dot(v0, normal);
+  distance_to_origin =  dot3(v0, normal);
 
-  uv_vert1_u = dot(f1, unit_u);
-  uv_vert2.u = dot(f2, unit_u);
-  uv_vert2.v = dot(f2, unit_v);
+  uv_vert1_u = dot3(f1, unit_u);
+  uv_vert2.u = dot3(f2, unit_u);
+  uv_vert2.v = dot3(f2, unit_v);
 
   wall_constants_precomputed = true;
 }

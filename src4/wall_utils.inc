@@ -439,14 +439,14 @@ static int wall_in_box(
   u = u * vec3_t(r_u);
   vec3_t v = cross(n, u);
   for (uint j = 0; j < VERTICES_IN_TRIANGLE; j++) {
-    vu_[j] = dot(*vert[j], u);
-    vv_[j] = dot(*vert[j], v);
+    vu_[j] = dot3(*vert[j], u);
+    vv_[j] = dot3(*vert[j], v);
   }
 
   /* Test every edge. */
   vec3_t bb = llf;
   float_t d_box[8];
-  d_box[0] = dot(bb, n);;
+  d_box[0] = dot3(bb, n);;
 
   for (uint i = 0; i < 12; i++) {
     float_t a1, a2;
@@ -458,7 +458,7 @@ static int wall_in_box(
       bb.x = (which_x2[i]) ? urb.x : llf.x;
       bb.y = (which_y2[i]) ? urb.y : llf.y;
       bb.z = (which_z2[i]) ? urb.z : llf.z;
-      a2 = d_box[edge2_vt[i]] = dot(bb, n);
+      a2 = d_box[edge2_vt[i]] = dot3(bb, n);
       a1 = d_box[edge1_vt[i]];
 
       if ((a1 - d < 0 && a2 - d < 0) || (a1 - d > 0 && a2 - d > 0)) {
@@ -487,8 +487,8 @@ static int wall_in_box(
     /* Now ba,bb = box edge endpoints ; a1,a2 = distances along wall normal */
     float_t r = (d - a1) / (a2 - a1);
     vec3_t c = ba + vec3_t(r) * (bb - ba);
-    float_t cu = dot(c, u);
-    float_t cv = dot(c, v);
+    float_t cu = dot3(c, u);
+    float_t cv = dot3(c, v);
     /* Test for internal intersection point in wall coordinate space */
     int temp = 0;
     for (uint j = 0; j < VERTICES_IN_TRIANGLE; j++) {

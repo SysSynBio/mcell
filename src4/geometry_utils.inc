@@ -66,8 +66,8 @@ static vec2_t xyz2uv(const Partition& p, const vec3_t& a, const Wall& w) {
   }
   else {
     vec3_t pos = a - p.get_wall_vertex(w, 0);
-    res.u = dot(pos, w.unit_u);
-    res.v = dot(pos, w.unit_v);
+    res.u = dot3(pos, w.unit_u);
+    res.v = dot3(pos, w.unit_v);
   }
   return res;
 }
@@ -380,7 +380,7 @@ static int same_side(const vec3_t& p1, const vec3_t& p2, const vec3_t& a, const 
   cp1 = cross(b_a, p1_a);
   cp2 = cross(b_a, p2_a);
 
-  if (dot(cp1, cp2) >= 0) {
+  if (dot3(cp1, cp2) >= 0) {
     return 1;
   }
   else {
@@ -487,8 +487,8 @@ static void closest_pt_point_triangle(
   ap = p - a;
 
   float_t d1, d2;
-  d1 = dot(ab, ap);
-  d2 = dot(ac, ap);
+  d1 = dot3(ab, ap);
+  d2 = dot3(ac, ap);
 
   if (d1 <= 0.0 && d2 <= 0.0) {
     final_result = a;
@@ -498,8 +498,8 @@ static void closest_pt_point_triangle(
   /* Check if P in vertex region outside B */
   vec3_t bp = p - b;
   float_t d3, d4;
-  d3 = dot(ab, bp);
-  d4 = dot(ac, bp);
+  d3 = dot3(ab, bp);
+  d4 = dot3(ac, bp);
   if (d3 >= 0.0 && d4 <= d3) {
     final_result = b;
     return;
@@ -519,8 +519,8 @@ static void closest_pt_point_triangle(
   /* Check if P in vertex region outside C */
   vec3_t cp = p - c;
   float_t d5, d6;
-  d5 = dot(ab, cp);
-  d6 = dot(ac, cp);
+  d5 = dot3(ab, cp);
+  d6 = dot3(ac, cp);
   if (d6 >= 0.0 && d5 <= d6) {
     final_result = c;
     return;
@@ -680,7 +680,7 @@ static bool is_point_above_plane_defined_by_wall(const Partition& p, const Wall&
   vec3_t w0_pos = pos - p.get_wall_vertex(w, 0);
 
   // dot product with normal gives ||a|| * ||b|| * cos(phi)
-  float_t dot_prod = dot(w0_pos, w.normal);
+  float_t dot_prod = dot3(w0_pos, w.normal);
   assert(!cmp_eq(dot_prod, 0, EPS) && "Checked point is on the plane");
   return dot_prod > 0;
 }

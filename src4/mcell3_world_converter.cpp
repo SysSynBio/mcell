@@ -275,6 +275,10 @@ void MCell3WorldConverter::create_uninitialized_walls_for_polygonal_object(const
 
     // which partition?
     partition_index_t partition_index = world->get_partition_index(*w->vert[0]);
+    if (partition_index == PARTITION_INDEX_INVALID) {
+      mcell_error("Internal error: could not find vertex (%f, %f, %f) during conversion.",
+          w->vert[0]->x, w->vert[0]->y, w->vert[0]->z);
+    }
 
     // check that the remaining vertices are in the same partition
     for (uint k = 1; k < VERTICES_IN_TRIANGLE; k++) {
@@ -282,7 +286,7 @@ void MCell3WorldConverter::create_uninitialized_walls_for_polygonal_object(const
 
       if (partition_index != curr_partition_index) {
         vec3_t pos(*w->vert[k]);
-        mcell_log("Error: whole walls must be in a single partition is for now, vertex %s is out of bounds", pos.to_string().c_str());
+        mcell_error("Error: whole walls must be in a single partition is for now, vertex %s is out of bounds", pos.to_string().c_str());
       }
     }
 

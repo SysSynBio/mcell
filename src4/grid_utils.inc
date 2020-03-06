@@ -96,8 +96,8 @@ static tile_index_t xyz2grid_tile_index(
     mcell_internal_error("Error in function 'uv2grid()': point is outside wall.");
   }
 
-  float_t i = dot(v, unit_u) - g.vert0.u;
-  float_t j = dot(v, unit_v) - g.vert0.v;
+  float_t i = dot3(v, unit_u) - g.vert0.u;
+  float_t j = dot3(v, unit_v) - g.vert0.v;
 
   int strip, stripe, flip;
   float_t striploc, striprem, stripeloc, striperem;

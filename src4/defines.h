@@ -60,6 +60,8 @@
 // might be some nasty cyclic include dependencies
 #endif
 
+// FIXME: it seems that everyone else uses .inl intead of .inc extensions
+
 /**
  * Usage of IDs and indexes:
  *
@@ -310,11 +312,12 @@ public:
 // ---------------------------------- vector types ----------------------------------
 
 #if FLOAT_T_BYTES == 8
+typedef glm::dvec4 glm_vec4_t; // using vec4 because it allows for vector optimizations
 typedef glm::dvec3 glm_vec3_t;
 typedef glm::dvec2 glm_vec2_t;
 typedef glm::dmat4x4 mat4x4;
 #else
-typedef glm::fvec3 glm_vec3_t;
+typedef glm::fvec3 glm_vec4_t;
 typedef glm::fvec2 glm_vec2_t;
 typedef glm::fmat4x4 mat4x4;
 #endif
@@ -324,20 +327,31 @@ typedef glm::uvec3 uvec3_t;
 typedef glm::bvec3 bvec3_t;
 
 // NOTE: rename to Vec3? - not sure, this is a really simple object...
-struct vec3_t: public glm_vec3_t {
-  vec3_t() = default;
-  vec3_t(const glm_vec3_t& a) { x = a.x; y = a.y; z = a.z; }
-  vec3_t(const vec3_t& a) : glm_vec3_t(a.x, a.y, a.z) { }
-  vec3_t(const ivec3_t& a) : glm_vec3_t(a.x, a.y, a.z) { }
+struct vec3_t: public glm_vec4_t {
+  vec3_t() { x = 0; y = 0; z = 0; w = 0; }
+  vec3_t(const glm_vec3_t& a) { x = a.x; y = a.y; z = a.z; w = 0; }
+  vec3_t(const glm_vec4_t& a) { x = a.x; y = a.y; z = a.z; w = 0; } // copy w as well?
+  vec3_t(const vec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { }
+  vec3_t(const ivec3_t& a) : glm_vec4_t(a.x, a.y, a.z, 0) { }
   vec3_t(const vector3& a) { x = a.x; y = a.y; z = a.z; }
-  vec3_t(const float_t x_, const float_t y_, const float_t z_) { x = x_; y = y_; z = z_; }
-  vec3_t(const float_t xyz) { x = xyz; y = xyz; z = xyz; }
+  vec3_t(const float_t x_, const float_t y_, const float_t z_) { x = x_; y = y_; z = z_; w = 0; }
+  vec3_t(const float_t xyz) { x = xyz; y = xyz; z = xyz; w = 0; }
 
   bool is_valid() const { return !(x == POS_INVALID || y == POS_INVALID || z == POS_INVALID); }
+
+  // we must not divide by all members - w is 0
+  inline vec3_t operator/ (const vec3_t divisor) const {
+    return vec3_t(x/divisor.x, y/divisor.y, z/divisor.z);
+  }
 
   std::string to_string() const;
   void dump(const std::string extra_comment, const std::string ind) const;
 };
+
+// we must not divide by all members - w is 0
+static inline vec3_t operator/ (const float_t dividend, const vec3_t divisor) {
+  return vec3_t(dividend/divisor.x, dividend/divisor.y, dividend/divisor.z);
+}
 
 // usually are .u and .v used to access contained values
 struct vec2_t: public glm_vec2_t {
@@ -410,30 +424,41 @@ static inline bool cmp_eq(float_t a, float_t b) {
   return cmp_eq(a, b, EPS);
 }
 
-static inline bool cmp_eq(const vec3_t& a, const vec3_t& b, const float_t eps) {
+static inline bool cmp_all_eq3(const vec3_t& a, const vec3_t& b, const float_t eps) {
   return cmp_eq(a.x, b.x, eps) && cmp_eq(a.y, b.y, eps) && cmp_eq(a.z, b.z, eps);
 }
 
-static inline bool cmp_eq(const vec3_t& a, const vec3_t& b) {
-  return cmp_eq(a, b, EPS);
+static inline bool cmp_all_eq3(const vec3_t& a, const vec3_t& b) {
+  return cmp_all_eq3(a, b, EPS);
 }
 
-static inline bool cmp_eq(const vec2_t& a, const vec2_t& b, const float_t eps) {
+static inline bool cmp_all_eq2(const vec2_t& a, const vec2_t& b, const float_t eps) {
   return cmp_eq(a.x, b.x, eps) && cmp_eq(a.y, b.y, eps);
 }
 
-static inline bool cmp_eq(const vec2_t& a, const vec2_t& b) {
-  return cmp_eq(a, b, EPS);
+static inline bool cmp_all_eq2(const vec2_t& a, const vec2_t& b) {
+  return cmp_all_eq2(a, b, EPS);
 }
 
 static inline bool cmp_lt(const float_t a, const float_t b, const float_t eps) {
   return a < b && !cmp_eq(a, b, eps);
 }
 
+static inline bool cmp_all_lt3(const vec3_t& a, const vec3_t& b, const float_t eps) {
+  return cmp_eq(a.x, b.x, eps) && cmp_eq(a.y, b.y, eps) && cmp_eq(a.z, b.z, eps);
+}
+
 static inline bool cmp_gt(const float_t a, const float_t b, const float_t eps) {
   return a > b && !cmp_eq(a, b, eps);
 }
 
+static inline bool cmp_all_ge3_noeps(const vec3_t& a, const vec3_t& b) {
+  return a.x >= b.x && a.y >= b.y && a.z >= b.z;
+}
+
+static inline bool cmp_all_lt3_noeps(const vec3_t& a, const vec3_t& b) {
+  return a.x < b.x && a.y < b.y && a.z < b.z;
+}
 
 static inline uint powu(const uint a, const uint n) {
   uint res = a;
@@ -444,22 +469,22 @@ static inline uint powu(const uint a, const uint n) {
 }
 
 static inline float_t max3d(const vec3_t& v) {
-  return glm::compMax((glm_vec3_t)v);
+  return glm::compMax((glm_vec4_t)v);
 }
 
 static inline vec3_t abs3(const vec3_t& v) {
-  return glm::abs((glm_vec3_t)v);
+  return glm::abs((glm_vec4_t)v);
 }
 
 static inline vec3_t floor3(const vec3_t& v) {
-  return glm::floor((glm_vec3_t)v);
+  return glm::floor((glm_vec4_t)v);
 }
 
 /* abs_max_2vec picks out the largest (absolute) value found among two vectors
  * (useful for properly handling floating-point rounding error). */
 static inline float_t abs_max_2vec(const vec3_t& v1, const vec3_t& v2) {
-  glm_vec3_t v1abs = abs3(v1);
-  glm_vec3_t v2abs = abs3(v2);
+  glm_vec4_t v1abs = abs3(v1);
+  glm_vec4_t v2abs = abs3(v2);
   vec3_t vmax = glm::max(v1abs, v2abs);
   return MCell::max3d(vmax);
 }
@@ -481,8 +506,8 @@ static inline float_t len2(const vec2_t& v1) {
   return sqrt_f(len2_squared(v1));
 }
 
-static inline float_t dot(const vec3_t& v1, const vec3_t& v2) {
-  return glm::dot((glm_vec3_t)v1, (glm_vec3_t)v2);
+static inline float_t dot3(const vec3_t& v1, const vec3_t& v2) {
+  return glm::dot((glm_vec4_t)v1, (glm_vec4_t)v2);
 }
 
 static inline float_t len3_squared(const vec3_t& v1) {
@@ -499,7 +524,7 @@ static inline float_t distance3(const vec3_t& v1, const vec3_t& v2) {
 }
 
 static inline uint get_largest_abs_dim_index(const vec3_t& v) {
-  vec3_t a = glm::abs(glm_vec3_t(v));
+  vec3_t a = glm::abs(glm_vec4_t(v));
   if (a.x > a.y) {
     if (a.x > a.z) {
       return 0; // x
@@ -540,7 +565,7 @@ static inline bool point_in_box(const vec3_t& pt, const vec3_t& llf, const vec3_
  * in vector3 v3.
  */
 static inline vec3_t cross(const vec3_t& v1, const vec3_t& v2) {
-  return glm::cross((glm_vec3_t)v1, (glm_vec3_t)v2);
+  return vec3_t(glm::cross((glm_vec3_t)v1, (glm_vec3_t)v2));
 }
 
 // returns true when whether two values are measurably different

@@ -232,7 +232,7 @@ void ReleaseEvent::release_ellipsoid_or_rectcuboid(uint computed_release_number)
       if (r == 0.0) {
         pos = vec3_t(0.0, 0.0, 0.5);
       } else {
-        pos /= r;
+        pos = pos / r;
       }
     }
 

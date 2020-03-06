@@ -128,15 +128,8 @@ public:
     }
   }
 
-  // data is ordered to avoid alignment holes (for 64-bit floats)
-  molecule_id_t id; // unique molecule id (for now it is unique per partition but should be world-wide unique)
-  uint flags;
-
-  float_t unimol_rx_time;
-
-  const RxnClass* unimol_rx;
-
   // update assignment operator when modifying this
+  // position of first due to alignment
   union {
     // volume molecule data
     struct {
@@ -154,6 +147,14 @@ public:
       tile_index_t grid_tile_index;
     } s;
   };
+
+  // data is ordered to avoid alignment holes (for 64-bit floats)
+  molecule_id_t id; // unique molecule id (for now it is unique per partition but should be world-wide unique)
+  uint flags;
+
+  float_t unimol_rx_time;
+
+  const RxnClass* unimol_rx;
 
   species_id_t species_id;
 

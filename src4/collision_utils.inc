@@ -80,7 +80,7 @@ static vec3_t get_displacement_up_to_partition_boundary(
 
   vec3_t diff = partition_edges - pos;
 
-  vec3_t displacement_rcp = float_t(1.0)/displacement_nonzero; // POSSIBLE ZERO DIV
+  vec3_t displacement_rcp = vec3_t(1.0)/displacement_nonzero; // POSSIBLE ZERO DIV
 
   // time we hit a boundary
   float_t hit_time = 1;
@@ -146,7 +146,7 @@ static inline void get_corner_points_for_subpart_colection(
     small_vector<vec3_t>& pts
 ) {
   assert(pts.size() >= 4);
-  assert(!cmp_eq(move, 0));
+  assert(!cmp_all_eq3(move, 0));
   /* A) compute 4 points where the traces start
           p0--p1
           |\  /|
@@ -204,8 +204,8 @@ static inline void get_corner_points_for_subpart_colection(
       cmp_eq(len3(v0), radius, SQRT_EPS) && cmp_eq(len3(v1), radius, SQRT_EPS) &&
       cmp_eq(len3(v2), radius, SQRT_EPS) && cmp_eq(len3(v3), radius, SQRT_EPS));
   assert(
-      cmp_eq(dot(v0, move), 0, SQRT_EPS) && cmp_eq(dot(v1, move), 0, SQRT_EPS) &&
-      cmp_eq(dot(v2, move), 0, SQRT_EPS) && cmp_eq(dot(v3, move), 0, SQRT_EPS));
+      cmp_eq(dot3(v0, move), 0, SQRT_EPS) && cmp_eq(dot3(v1, move), 0, SQRT_EPS) &&
+      cmp_eq(dot3(v2, move), 0, SQRT_EPS) && cmp_eq(dot3(v3, move), 0, SQRT_EPS));
 
   pts[0] = pos + v0;
   pts[1] = pos + v1;
@@ -240,7 +240,7 @@ static inline void get_corner_points_for_subpart_colection(
   Thanks to Jetro Lauha of Fathammer in Helsinki, Finland for reporting this error.
 */
 
-static void __attribute__((always_inline)) raycast_with_endpoints(
+static void /*__attribute__((always_inline))*/ raycast_with_endpoints(
     const Partition& p, const vec3_t& pt1, const vec3_t& pt2,
     const uint pt_index /*only for debug*/, const bool collect_for_walls, /* wall subparts are collected for the internal ray */
     const ivec3_t& dir, const vec3_t& abs_d_rcp, const vec3_t& deltat,
@@ -346,7 +346,7 @@ static inline void /*__attribute__((always_inline))*/ collect_crossed_subparts(
   }
   assert(crossed_subparts_for_molecules.empty());
 
-  if (cmp_eq(displacement, 0)) {
+  if (cmp_all_eq3(displacement, vec3_t(0))) {
     // we are practically not moving (add some nearby positions?)
     crossed_subparts_for_walls.push_back(vm.v.subpart_index);
     crossed_subparts_for_molecules.insert(vm.v.subpart_index);
@@ -443,7 +443,7 @@ static inline void /*__attribute__((always_inline))*/ collect_crossed_subparts(
   abs_d.y = (abs_d.y == 0) ? EPS : abs_d.y;
   abs_d.z = (abs_d.z == 0) ? EPS : abs_d.z;
 
-  vec3_t abs_d_rcp = float_t(1.0)/abs_d;
+  vec3_t abs_d_rcp = vec3_t(1.0)/abs_d;
   vec3_t deltat = vec3_t(p.config.subpartition_edge_length) * abs_d_rcp;
 
   for (uint i = 0; i < start_positions.size(); i++){
@@ -474,14 +474,14 @@ static bool collide_mol(
   const vec3_t& pos = colliding_vm.v.pos; /* Position of target molecule */
   vec3_t dir = pos - diffused_vm.v.pos;  /* From starting point of moving molecule to target */
 
-  float_t d = glm::dot((glm_vec3_t)dir, (glm_vec3_t)displacement);        /* Dot product of movement vector and vector to target */
+  float_t d = glm::dot((glm_vec4_t)dir, (glm_vec4_t)displacement);        /* Dot product of movement vector and vector to target */
 
   /* Miss the molecule if it's behind us */
   if (d < 0) {
     return false;
   }
 
-  float_t movelen2 = glm::dot((glm_vec3_t)displacement, (glm_vec3_t)displacement); /* Square of distance the moving molecule travels */
+  float_t movelen2 = glm::dot((glm_vec4_t)displacement, (glm_vec4_t)displacement); /* Square of distance the moving molecule travels */
 
   /* check whether the test molecule is further than the displacement. */
   if (d > movelen2) {
@@ -490,7 +490,7 @@ static bool collide_mol(
 
   /* check whether the moving molecule will miss interaction disk of the
      test molecule.*/
-  float_t dirlen2 = glm::dot((glm_vec3_t)dir, (glm_vec3_t)dir);
+  float_t dirlen2 = glm::dot((glm_vec4_t)dir, (glm_vec4_t)dir);
   float_t sigma2 = rx_radius_3d * rx_radius_3d;   /* Square of interaction radius */
   if (movelen2 * dirlen2 - d * d > movelen2 * sigma2) {
     return false;
@@ -562,7 +562,7 @@ static void jump_away_line(
   float_t le_1, tiny;
 
   e = B - A;
-  float_t elen2 = glm::dot((glm_vec3_t)e, (glm_vec3_t)e);
+  float_t elen2 = glm::dot((glm_vec4_t)e, (glm_vec4_t)e);
   le_1 = 1.0 / sqrt(elen2);
 
   e = e * vec3_t(le_1);
@@ -572,7 +572,7 @@ static void jump_away_line(
   f.z = n.x * e.y - n.y * e.x;
 
   tiny = EPS * (MCell::abs_max_2vec(p, v) + 1.0) /
-         (k * max3d(glm::abs((glm_vec3_t)f)));
+         (k * max3d(glm::abs((glm_vec4_t)f)));
   if ((rng_uint(&rng) & 1) == 0) {
     tiny = -tiny;
   }
@@ -619,8 +619,8 @@ static CollisionType collide_wall(
 
   const vec3_t& normal = face.normal;
 
-  dp = dot(normal, pos);
-  dv = dot(normal, move);
+  dp = dot3(normal, pos);
+  dv = dot3(normal, move);
   dd = dp - face.distance_to_origin;
 
   if (dd > 0) {
@@ -683,8 +683,8 @@ static CollisionType collide_wall(
 
   vec3_t local = collision_pos - face_vert[0];
 
-  float_t b = dot(local, face.unit_u);
-  float_t c = dot(local, face.unit_v);
+  float_t b = dot3(local, face.unit_u);
+  float_t c = dot3(local, face.unit_v);
 
   float_t f;
   if (face.uv_vert2.v < 0.0) {
@@ -933,7 +933,7 @@ static bool collide_line_and_line_test(
   }
 
   // s=((cxb)·(axb))/(|axb|^2)
-  float_t s = dot(c_x_b, a_x_b) / len_squared_a_x_b;
+  float_t s = dot3(c_x_b, a_x_b) / len_squared_a_x_b;
 
   // check whether we are in segment e-f
   if (s < 0.0 || s > 1.0) {
@@ -958,7 +958,7 @@ static bool collide_line_and_line_test(
     return false;
   }
 
-  float_t t = dot(d_x_a, b_x_a) / len_squared_b_x_a;
+  float_t t = dot3(d_x_a, b_x_a) / len_squared_b_x_a;
 
   if (t < 0.0 || t > 1.0) {
     return false;
@@ -1044,7 +1044,7 @@ static float_t compute_f(
     const float_t t
 ) {
   return
-      dot(
+      dot3(
           cross((e - f), (-f + k + (-k + l) * vec3_t(t)) ),
           (-e + m + (-m + n) * vec3_t(t))
       );
@@ -1057,7 +1057,7 @@ static float_t compute_df(
     const float_t t
 ) {
   return
-      dot(
+      dot3(
           cross(
               (e - f),
               (-k + l)
@@ -1065,7 +1065,7 @@ static float_t compute_df(
           (-e + m + (- m + n) * vec3_t(t))
       )
       +
-      dot(
+      dot3(
           cross(
               (e - f),
               (-f + k + (- k + l) * vec3_t(t))
@@ -1087,7 +1087,7 @@ static bool find_plane_crossing_efop(
     const vec3_t& m, const vec3_t& n,
     vec3_t& o, vec3_t& p) {
 
-  assert(cmp_eq(f, e + move));
+  assert(cmp_all_eq3(f, e + move));
 
   // first determine t, it must be in the range 0..1
   // f is continuous and (should?) have just one solution
@@ -1256,7 +1256,7 @@ static int reflect_or_periodic_bc(
 
   reflected_wall_index = reflect_w;
 
-  float_t reflect_factor = -2.0 * glm::dot((glm_vec3_t)displacement, (glm_vec3_t)w.normal);
+  float_t reflect_factor = -2.0 * glm::dot((glm_vec4_t)displacement, (glm_vec4_t)w.normal);
 
   // Set displacement for remainder of step length
   // No PBCs or non-traditional PBCs
