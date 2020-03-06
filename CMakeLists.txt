@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(mcell)
 
+include(ProcessorCount)
+
 #TODO: unify case for cmake commands, e.g. set vs SET
 
 
@@ -90,7 +92,28 @@ if (ENABLE_GPERFTOOLS)
   # pprof --gv <app> ./prof.out # graphical output, requires gv installed
   # (http://euccas.github.io/blog/20170827/cpu-profiling-tools-on-linux.html)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITHGPERFTOOLS -I${CMAKE_CURRENT_BINARY_DIR}/libs/")
-  SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR}/libs/install_gperftools/lib/ -lprofiler")
+  
+  set(GPERFTOOLS_LIB ${CMAKE_CURRENT_BINARY_DIR}/libs/install_gperftools/lib/libprofiler.a)
+  # referencing directly the archive -lprofiler is too general and can lead to   
+  SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GPERFTOOLS_LIB}")
+  
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libs/build_gperftools)
+  execute_process(
+  	COMMAND bash "-c" "${CMAKE_SOURCE_DIR}/libs/gperftools/configure --prefix=${CMAKE_CURRENT_BINARY_DIR}/libs/install_gperftools" 
+  	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libs/build_gperftools 
+  )
+  message(STATUS "Configured gperftools")
+ 
+  ProcessorCount(NCORES)
+  if(NCORES EQUAL 0)
+  	set(NCORES 1)
+  endif()
+  add_custom_command(
+    OUTPUT ${GPERFTOOLS_LIB}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/libs/build_gperftools 
+    COMMAND make install -j${NCORES}
+  )
+
 endif()
 	
 if (ENABLE_SANITIZER)
@@ -320,7 +343,9 @@ add_executable(mcell
   ${BISON_mdlParser_OUTPUTS}
   ${BISON_dynGeomParser_OUTPUTS}  
   ${FLEX_mdlScanner_OUTPUTS}
-  ${FLEX_dynGeomScanner_OUTPUTS})
+  ${FLEX_dynGeomScanner_OUTPUTS}
+  ${GPERFTOOLS_LIB} 
+)
 
 add_dependencies(mcell version_h)
 
